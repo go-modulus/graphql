@@ -7,7 +7,7 @@ import (
 	"github.com/go-modulus/modulus/module"
 )
 
-func NewModule() *module.Module {
+func NewModule(options ...module.Option) *module.Module {
 	return module.NewModule("modulus/graphql").
 		AddDependencies(
 			mHttp.NewModule(),
@@ -20,7 +20,8 @@ func NewModule() *module.Module {
 			NewPlaygroundHandlerRoute,
 		).
 		SetOverriddenProvider("modulus/graphql.ErrorPresenter", NewErrorPresenter).
-		InitConfig(Config{})
+		InitConfig(Config{}).
+		WithOptions(options...)
 }
 
 // OverrideErrorPresenter overrides the error presenter provider.
@@ -36,7 +37,7 @@ func OverrideErrorPresenter[T ErrorPresenterFactory](gqlModule *module.Module) *
 func NewManifesto() module.Manifesto {
 	graphqlModule := module.NewManifesto(
 		NewModule(),
-		"github.com/go-modulus/modulus/graphql",
+		"github.com/go-modulus/graphql",
 		"Graphql server and generator. It is based on the gqlgen library. It also provides a playground for the graphql server. You need to install the `chi http` module to use this module.",
 		"1.0.0",
 	)
