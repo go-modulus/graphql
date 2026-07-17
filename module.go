@@ -43,55 +43,55 @@ func NewManifesto() module.Manifesto {
 	)
 	graphqlModule.Install.AppendFiles(
 		module.InstalledFile{
-			SourceUrl: "https://raw.githubusercontent.com/go-modulus/modulus/refs/heads/main/graphql/install/schema.graphql",
+			SourceUrl: "https://raw.githubusercontent.com/go-modulus/graphql/refs/heads/main/install/schema.graphql",
 			DestFile:  "internal/graphql/schema.graphql",
 		},
 		module.InstalledFile{
-			SourceUrl: "https://raw.githubusercontent.com/go-modulus/modulus/refs/heads/main/graphql/install/gqlgen.yaml",
+			SourceUrl: "https://raw.githubusercontent.com/go-modulus/graphql/refs/heads/main/install/gqlgen.yaml",
 			DestFile:  "gqlgen.yaml",
 		},
 		module.InstalledFile{
-			SourceUrl: "https://raw.githubusercontent.com/go-modulus/modulus/refs/heads/main/graphql/install/types/time.go",
+			SourceUrl: "https://raw.githubusercontent.com/go-modulus/graphql/refs/heads/main/install/types/time.go",
 			DestFile:  "internal/graphql/types/time.go",
 		},
 		module.InstalledFile{
-			SourceUrl: "https://raw.githubusercontent.com/go-modulus/modulus/refs/heads/main/graphql/install/types/time.graphql",
+			SourceUrl: "https://raw.githubusercontent.com/go-modulus/graphql/refs/heads/main/install/types/time.graphql",
 			DestFile:  "internal/graphql/types/time.graphql",
 		},
 		module.InstalledFile{
-			SourceUrl: "https://raw.githubusercontent.com/go-modulus/modulus/refs/heads/main/graphql/install/types/uuid.go",
+			SourceUrl: "https://raw.githubusercontent.com/go-modulus/graphql/refs/heads/main/install/types/uuid.go",
 			DestFile:  "internal/graphql/types/uuid.go",
 		},
 		module.InstalledFile{
-			SourceUrl: "https://raw.githubusercontent.com/go-modulus/modulus/refs/heads/main/graphql/install/types/uuid.graphql",
+			SourceUrl: "https://raw.githubusercontent.com/go-modulus/graphql/refs/heads/main/install/types/uuid.graphql",
 			DestFile:  "internal/graphql/types/uuid.graphql",
 		},
 		module.InstalledFile{
-			SourceUrl: "https://raw.githubusercontent.com/go-modulus/modulus/refs/heads/main/graphql/install/types/void.go",
+			SourceUrl: "https://raw.githubusercontent.com/go-modulus/graphql/refs/heads/main/install/types/void.go",
 			DestFile:  "internal/graphql/types/void.go",
 		},
 		module.InstalledFile{
-			SourceUrl: "https://raw.githubusercontent.com/go-modulus/modulus/refs/heads/main/graphql/install/types/void.graphql",
+			SourceUrl: "https://raw.githubusercontent.com/go-modulus/graphql/refs/heads/main/install/types/void.graphql",
 			DestFile:  "internal/graphql/types/void.graphql",
 		},
 		module.InstalledFile{
-			SourceUrl: "https://raw.githubusercontent.com/go-modulus/modulus/refs/heads/main/graphql/install/gqlgen.mk",
+			SourceUrl: "https://raw.githubusercontent.com/go-modulus/graphql/refs/heads/main/install/gqlgen.mk",
 			DestFile:  "mk/gqlgen.mk",
 		},
 		module.InstalledFile{
-			SourceUrl: "https://raw.githubusercontent.com/go-modulus/modulus/refs/heads/main/graphql/install/module.go.tmpl",
+			SourceUrl: "https://raw.githubusercontent.com/go-modulus/graphql/refs/heads/main/install/module.go.tmpl",
 			DestFile:  "internal/graphql/module.go",
 		},
 		module.InstalledFile{
-			SourceUrl: "https://raw.githubusercontent.com/go-modulus/modulus/refs/heads/main/graphql/install/model/tools.go",
+			SourceUrl: "https://raw.githubusercontent.com/go-modulus/graphql/refs/heads/main/install/model/tools.go",
 			DestFile:  "internal/graphql/model/tools.go",
 		},
 		module.InstalledFile{
-			SourceUrl: "https://raw.githubusercontent.com/go-modulus/modulus/refs/heads/main/graphql/install/resolver/resolver.go.tmpl",
+			SourceUrl: "https://raw.githubusercontent.com/go-modulus/graphql/refs/heads/main/install/resolver/resolver.go.tmpl",
 			DestFile:  "internal/graphql/resolver/resolver.go",
 		},
 		module.InstalledFile{
-			SourceUrl: "https://raw.githubusercontent.com/go-modulus/modulus/refs/heads/main/graphql/install/resolver/schema.resolvers.go.tmpl",
+			SourceUrl: "https://raw.githubusercontent.com/go-modulus/graphql/refs/heads/main/install/resolver/schema.resolvers.go.tmpl",
 			DestFile:  "internal/graphql/resolver/schema.resolvers.go",
 		},
 	).AppendPostInstallCommands(
