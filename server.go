@@ -28,12 +28,14 @@ type PlaygroundConfig struct {
 }
 
 type Config struct {
-	ComplexityLimit      int    `env:"GQL_COMPLEXITY_LIMIT, default=200"`
-	Path                 string `env:"GQL_API_URL, default=/graphql"`
-	IntrospectionEnabled bool   `env:"GQL_INTROSPECTION_ENABLED, default=true"`
-	TracingEnabled       bool   `env:"GQL_TRACING_ENABLED, default=false"`
-	ReturnCause          bool   `env:"GQL_RETURN_CAUSE, default=false"`
-	Playground           PlaygroundConfig
+	ComplexityLimit          int           `env:"GQL_COMPLEXITY_LIMIT, default=200"`
+	Path                     string        `env:"GQL_API_URL, default=/graphql"`
+	IntrospectionEnabled     bool          `env:"GQL_INTROSPECTION_ENABLED, default=true"`
+	TracingEnabled           bool          `env:"GQL_TRACING_ENABLED, default=false"`
+	ReturnCause              bool          `env:"GQL_RETURN_CAUSE, default=false"`
+	SubscriptionTransport    string        `env:"GQL_SUBSCRIPTION_TRANSPORT, default=ws" comment:"Transport for GraphQL subscriptions. Allowed values: ws, sse"`
+	SubscriptionPingInterval time.Duration `env:"GQL_SUBSCRIPTION_PING_INTERVAL, default=10s" comment:"Keepalive ping interval connection"`
+	Playground               PlaygroundConfig
 }
 
 type ErrorPresenterParams struct {
@@ -61,11 +63,19 @@ func NewGraphqlServer(
 	config := params.Config
 	srv := handler.New(params.Schema)
 
-	srv.AddTransport(
-		transport.SSE{
-			KeepAlivePingInterval: 5 * time.Second,
-		},
-	)
+	if config.SubscriptionTransport == "sse" {
+		srv.AddTransport(
+			transport.SSE{
+				KeepAlivePingInterval: config.SubscriptionPingInterval,
+			},
+		)
+	} else {
+		srv.AddTransport(
+			transport.Websocket{
+				KeepAlivePingInterval: config.SubscriptionPingInterval,
+			},
+		)
+	}
 	srv.AddTransport(transport.Options{})
 	srv.AddTransport(transport.GET{})
 	srv.AddTransport(transport.POST{})

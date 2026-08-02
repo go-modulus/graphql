@@ -2,6 +2,7 @@ package graphql
 
 import (
 	"github.com/99designs/gqlgen/graphql"
+	"github.com/99designs/gqlgen/graphql/handler"
 	mHttp "github.com/go-modulus/modulus/http"
 	"github.com/go-modulus/modulus/logger"
 	"github.com/go-modulus/modulus/module"
@@ -31,6 +32,24 @@ func OverrideErrorPresenter[T ErrorPresenterFactory](gqlModule *module.Module) *
 			return factory.NewErrorPresenter()
 		},
 	)
+}
+
+// DecorateServer - decorates GraphQL server with additional options.
+// decorator is a function that gets server with additional dependencies and returns a server
+// Example:
+// DecorateServer(func(srv *handler.Server) *handler.Server)
+func DecorateServer(decorator any) module.Option {
+	return func(m *module.Module) *module.Module {
+		m.Decorate(decorator)
+		return m
+	}
+}
+
+func DecorateWithDependency[T any](decorator func(srv *handler.Server, dep T) *handler.Server) module.Option {
+	return func(m *module.Module) *module.Module {
+		m.Decorate(decorator)
+		return m
+	}
 }
 
 // NewManifestModule creates a new graphql module with the manifest module.
