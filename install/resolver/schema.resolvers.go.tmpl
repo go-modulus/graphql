@@ -22,14 +22,15 @@ func (r *queryResolver) Ping(ctx context.Context) (string, error) {
 
 // Ping is the resolver for the ping field.
 func (r *subscriptionResolver) Ping(ctx context.Context) (<-chan string, error) {
-	ch := make(chan string)
+	ch := make(chan string, 10)
 	done := ctx.Done()
 
 	go func() {
-		timer := time.NewTimer(5 * time.Second)
+		ticker := time.NewTicker(2 * time.Second)
+		defer ticker.Stop()
 		for {
 			select {
-			case now := <-timer.C:
+			case now := <-ticker.C:
 				ch <- now.String()
 			case <-done:
 				close(ch)
