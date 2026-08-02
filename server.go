@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sort"
+	"sync"
 	"time"
 
 	"github.com/99designs/gqlgen/graphql/handler/apollotracing"
@@ -53,6 +55,95 @@ type ServerParams struct {
 	LoadersInitializer *LoadersInitializer `optional:"true"`
 	Logger             *slog.Logger
 	ErrorPresenter     graphql.ErrorPresenterFunc
+	InitFunc           transport.WebsocketInitFunc
+}
+
+// InitFuncFactory lets a WebSocket InitFunc be built with its own
+// dependencies resolved through DI (see AddInitFuncFactory), the same way
+// http.MiddlewareFactory lets an HTTP middleware be built with dependencies
+// for http.AddMiddlewareFactoryToPipeline.
+type InitFuncFactory interface {
+	InitFunc() transport.WebsocketInitFunc
+}
+
+// InitFuncRegistry accumulates transport.WebsocketInitFunc entries added via
+// AddInitFunc/AddInitFuncFactory, ranked the same way http.Pipeline ranks
+// HTTP middlewares: lower ranks run first, same-rank entries run in the
+// order they were added. It's a shared mutable singleton (like http.Pipeline)
+// populated by fx.Invoke calls before InitFunc ever reads from it.
+type InitFuncRegistry struct {
+	mu      sync.Mutex
+	entries map[int][]transport.WebsocketInitFunc
+	cache   []transport.WebsocketInitFunc
+}
+
+func NewInitFuncRegistry() *InitFuncRegistry {
+	return &InitFuncRegistry{}
+}
+
+// Add appends fn at the given rank.
+func (r *InitFuncRegistry) Add(rank int, fn transport.WebsocketInitFunc) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.entries == nil {
+		r.entries = make(map[int][]transport.WebsocketInitFunc)
+	}
+	r.entries[rank] = append(r.entries[rank], fn)
+	r.cache = nil
+}
+
+// List returns the flat, rank-sorted slice of registered InitFuncs.
+func (r *InitFuncRegistry) List() []transport.WebsocketInitFunc {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if len(r.entries) == 0 {
+		return nil
+	}
+	if len(r.cache) > 0 {
+		return r.cache
+	}
+
+	ranks := make([]int, 0, len(r.entries))
+	for rank := range r.entries {
+		ranks = append(ranks, rank)
+	}
+	sort.Ints(ranks)
+
+	result := make([]transport.WebsocketInitFunc, 0, len(r.entries))
+	for _, rank := range ranks {
+		result = append(result, r.entries[rank]...)
+	}
+	r.cache = result
+	return result
+}
+
+// InitFunc composes all registered transport.WebsocketInitFunc (see
+// AddInitFunc/AddInitFuncFactory) into a single one, used as the Websocket
+// transport's InitFunc. Registered functions run in rank order, acting like
+// a middleware chain: each one receives the context and InitPayload produced
+// by the previous one, and can reject the connection by returning an error,
+// or thread values through the context for the next InitFunc and for the
+// resolvers. The registry is read on every call rather than once here,
+// since fx.Invoke registrations that populate it (see AddInitFunc) must all
+// have already run by the time a real connection triggers this - reading it
+// once at provide-time could race a registration that hasn't happened yet.
+func InitFunc(registry *InitFuncRegistry) transport.WebsocketInitFunc {
+	return func(ctx context.Context, initPayload transport.InitPayload) (context.Context, *transport.InitPayload, error) {
+		payload := initPayload
+		for _, next := range registry.List() {
+			nextCtx, nextPayload, err := next(ctx, payload)
+			if err != nil {
+				return nextCtx, nil, err
+			}
+			ctx = nextCtx
+			if nextPayload != nil {
+				payload = *nextPayload
+			}
+		}
+		return ctx, &payload, nil
+	}
 }
 
 func NewGraphqlServer(
@@ -73,6 +164,7 @@ func NewGraphqlServer(
 		srv.AddTransport(
 			transport.Websocket{
 				KeepAlivePingInterval: config.SubscriptionPingInterval,
+				InitFunc:              params.InitFunc,
 			},
 		)
 	}

@@ -3,6 +3,7 @@ package graphql
 import (
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/handler/transport"
 	mHttp "github.com/go-modulus/modulus/http"
 	"github.com/go-modulus/modulus/logger"
 	"github.com/go-modulus/modulus/module"
@@ -19,6 +20,8 @@ func NewModule(options ...module.Option) *module.Module {
 			NewLoadersInitializer,
 			NewHandlerRoute,
 			NewPlaygroundHandlerRoute,
+			NewInitFuncRegistry,
+			InitFunc,
 		).
 		SetOverriddenProvider("modulus/graphql.ErrorPresenter", NewErrorPresenter).
 		InitConfig(Config{}).
@@ -49,6 +52,48 @@ func DecorateWithDependency[T any](decorator func(srv *handler.Server, dep T) *h
 	return func(m *module.Module) *module.Module {
 		m.Decorate(decorator)
 		return m
+	}
+}
+
+// AddInitFunc registers a transport.WebsocketInitFunc that runs whenever a
+// WebSocket subscription connection is initialized (i.e. on the client's
+// "connection_init" message). InitFuncs are ranked the same way
+// http.AddMiddlewareToPipeline ranks HTTP middlewares: lower ranks run
+// first, same-rank entries run in registration order. Each one acts like a
+// middleware, receiving the context and InitPayload produced by the previous
+// one (see InitFunc), and can reject the connection by returning an error or
+// thread values through the context for the next InitFunc and the resolvers.
+//
+// If your InitFunc needs its own dependencies (e.g. an authenticator
+// resolved through DI), use AddInitFuncFactory instead.
+func AddInitFunc(rank int, initFunc transport.WebsocketInitFunc) module.Option {
+	return func(m *module.Module) *module.Module {
+		return m.AddInvokes(
+			func(registry *InitFuncRegistry) {
+				registry.Add(rank, initFunc)
+			},
+		)
+	}
+}
+
+// AddInitFuncFactory registers an InitFuncFactory whose own dependencies are
+// resolved through DI: T is constructed by the container (so its
+// constructor can request whatever it needs, e.g. an authenticator or a
+// repository), and the transport.WebsocketInitFunc it returns from
+// InitFunc() is added to the registry at rank, same as AddInitFunc. This
+// mirrors how http.AddMiddlewareFactoryToPipeline builds an HTTP middleware
+// with dependencies via http.MiddlewareFactory.
+//
+// The concrete type T must be registered as a provider elsewhere (typically
+// in the consuming module's own AddProviders call), the same way a
+// MiddlewareFactory implementation is.
+func AddInitFuncFactory[T InitFuncFactory](rank int) module.Option {
+	return func(m *module.Module) *module.Module {
+		return m.AddInvokes(
+			func(registry *InitFuncRegistry, factory T) {
+				registry.Add(rank, factory.InitFunc())
+			},
+		)
 	}
 }
 
