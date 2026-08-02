@@ -9,7 +9,6 @@ import (
 	modulusHttp "github.com/go-modulus/modulus/http"
 
 	"github.com/99designs/gqlgen/graphql/handler"
-	"github.com/99designs/gqlgen/graphql/playground"
 )
 
 func NewHandlerRoute(handler *handler.Server, config Config) (modulusHttp.RouteProvider, modulusHttp.RouteProvider) {
@@ -46,7 +45,11 @@ func NewPlaygroundHandlerRoute(config Config) modulusHttp.RouteProvider {
 		return modulusHttp.ProvideRawRoute(
 			http.MethodGet,
 			config.Playground.Path,
-			playground.Handler("Graphql Playground", config.Path),
+			NewGraphiQLHandler(
+				"Graphql Playground",
+				config.Path,
+				config.SubscriptionTransport != "sse",
+			),
 		)
 	}
 
