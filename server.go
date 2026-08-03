@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/99designs/gqlgen/graphql/handler/apollotracing"
+	coderws "github.com/coder/websocket"
 	"github.com/go-modulus/modulus/http/errhttp"
 	"github.com/vektah/gqlparser/v2/ast"
 	"go.uber.org/fx"
@@ -30,14 +31,15 @@ type PlaygroundConfig struct {
 }
 
 type Config struct {
-	ComplexityLimit          int           `env:"GQL_COMPLEXITY_LIMIT, default=200"`
-	Path                     string        `env:"GQL_API_URL, default=/graphql"`
-	IntrospectionEnabled     bool          `env:"GQL_INTROSPECTION_ENABLED, default=true"`
-	TracingEnabled           bool          `env:"GQL_TRACING_ENABLED, default=false"`
-	ReturnCause              bool          `env:"GQL_RETURN_CAUSE, default=false"`
-	SubscriptionTransport    string        `env:"GQL_SUBSCRIPTION_TRANSPORT, default=ws" comment:"Transport for GraphQL subscriptions. Allowed values: ws, sse"`
-	SubscriptionPingInterval time.Duration `env:"GQL_SUBSCRIPTION_PING_INTERVAL, default=10s" comment:"Keepalive ping interval connection"`
-	Playground               PlaygroundConfig
+	ComplexityLimit            int           `env:"GQL_COMPLEXITY_LIMIT, default=200"`
+	Path                       string        `env:"GQL_API_URL, default=/graphql"`
+	IntrospectionEnabled       bool          `env:"GQL_INTROSPECTION_ENABLED, default=true"`
+	TracingEnabled             bool          `env:"GQL_TRACING_ENABLED, default=false"`
+	ReturnCause                bool          `env:"GQL_RETURN_CAUSE, default=false"`
+	SubscriptionTransport      string        `env:"GQL_SUBSCRIPTION_TRANSPORT, default=ws" comment:"Transport for GraphQL subscriptions. Allowed values: ws, sse"`
+	SubscriptionPingInterval   time.Duration `env:"GQL_SUBSCRIPTION_PING_INTERVAL, default=10s" comment:"Keepalive ping interval connection"`
+	SubscriptionOriginPatterns []string      `env:"GQL_SUBSCRIPTION_ORIGIN_PATTERNS, default=" comment:"Comma-separated list of allowed origin host patterns for WebSocket subscription connections (see coder/websocket AcceptOptions.OriginPatterns). The request host is always authorized. Leave empty to only allow same-origin connections."`
+	Playground                 PlaygroundConfig
 }
 
 type ErrorPresenterParams struct {
@@ -130,7 +132,11 @@ func (r *InitFuncRegistry) List() []transport.WebsocketInitFunc {
 // have already run by the time a real connection triggers this - reading it
 // once at provide-time could race a registration that hasn't happened yet.
 func InitFunc(registry *InitFuncRegistry) transport.WebsocketInitFunc {
-	return func(ctx context.Context, initPayload transport.InitPayload) (context.Context, *transport.InitPayload, error) {
+	return func(ctx context.Context, initPayload transport.InitPayload) (
+		context.Context,
+		*transport.InitPayload,
+		error,
+	) {
 		payload := initPayload
 		for _, next := range registry.List() {
 			nextCtx, nextPayload, err := next(ctx, payload)
@@ -165,6 +171,11 @@ func NewGraphqlServer(
 			transport.Websocket{
 				KeepAlivePingInterval: config.SubscriptionPingInterval,
 				InitFunc:              params.InitFunc,
+				Implementation: transport.CoderWebsocketImplementation{
+					AcceptOptions: coderws.AcceptOptions{
+						OriginPatterns: config.SubscriptionOriginPatterns,
+					},
+				},
 			},
 		)
 	}
