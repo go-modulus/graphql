@@ -39,6 +39,7 @@ type Config struct {
 	SubscriptionTransport      string        `env:"GQL_SUBSCRIPTION_TRANSPORT, default=ws" comment:"Transport for GraphQL subscriptions. Allowed values: ws, sse"`
 	SubscriptionPingInterval   time.Duration `env:"GQL_SUBSCRIPTION_PING_INTERVAL, default=10s" comment:"Keepalive ping interval connection"`
 	SubscriptionOriginPatterns []string      `env:"GQL_SUBSCRIPTION_ORIGIN_PATTERNS, default=" comment:"Comma-separated list of allowed origin host patterns for WebSocket subscription connections (see coder/websocket AcceptOptions.OriginPatterns). The request host is always authorized. Leave empty to only allow same-origin connections."`
+	SubscriptionSubProtocols   []string      `env:"GQL_SUBSCRIPTION_SUBPROTOCOLS, default=graphql-transport-ws,graphql-ws" comment:"Comma-separated list of allowed subprotocols for WebSocket subscription connections. The request host is always authorized. Leave empty to only allow same-origin connections."`
 	Playground                 PlaygroundConfig
 }
 
@@ -174,6 +175,7 @@ func NewGraphqlServer(
 				Implementation: transport.CoderWebsocketImplementation{
 					AcceptOptions: coderws.AcceptOptions{
 						OriginPatterns: config.SubscriptionOriginPatterns,
+						Subprotocols:   config.SubscriptionSubProtocols,
 					},
 				},
 			},
